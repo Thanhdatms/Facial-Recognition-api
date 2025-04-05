@@ -4,7 +4,10 @@ import time
 from flask import Flask, Response, Blueprint, jsonify, request
 import threading
 import torch
+import requests
+from annoy import AnnoyIndex
 import numpy as np
+from collections import Counter
 import paho.mqtt.client as mqtt
 from src.models.siamese_model import SiameseModel
 from src.utils.image_processing import encode_image, inference_transform
@@ -13,7 +16,16 @@ from src.config.config import captured_folder, dimension, threshold, checkpoint_
 
 # Flask Blueprint
 face_recognition_bp = Blueprint('face_recognition', __name__)
-esp32_cam_stream_url = "http://172.16.1.21:81/stream"
+esp32_cam_stream_url = "http://192.168.208.58:81/stream"
+url_embedding = "http://192.168.182.138:8081/getAllDataWithUsername"
+
+
+broker = "192.168.182.138"
+port = 1883
+topic = "esp32/data"
+
+client = mqtt.Client()
+
 # Load face cascade
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
@@ -174,7 +186,7 @@ def generate_frames():
             if face_detected_time == 0:
                 face_detected_time = current_time
 
-            if current_time - face_detected_time >= 0 and current_time - last_saved_time >= 0:
+            if current_time - face_detected_time >= 3 and current_time - last_saved_time >= 8:
                 print(f"Saving image after {current_time - face_detected_time}s and {current_time - last_saved_time}s.")
                 face_detected_time = 0
                 last_saved_time = current_time
