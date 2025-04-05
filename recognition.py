@@ -7,7 +7,7 @@ from datetime import datetime
 import time
 import base64
 from collections import Counter
-from annoy import AnnoyIndex
+# from annoy import AnnoyIndex
 import threading
 from flask import Flask, Response
 import paho.mqtt.client as mqtt
@@ -191,65 +191,65 @@ def fetch_embeddings_from_url(url):
     
 #     return labels, usernames, member_ids
 
-def build_annoy_index_sample(dimension, index_file):
-    sample_data = [
-        {"embedding": [ 0.0650,  0.0825,  0.0149,  0.0949,  0.1470, -0.0238, -0.0624,  0.1270,
-         -0.1354, -0.1120, -0.0754,  0.1426, -0.0095, -0.0597, -0.0445,  0.0180,
-         -0.1284,  0.1015, -0.1072, -0.1799, -0.1064,  0.0546,  0.0280, -0.1509,
-         -0.0395,  0.0357, -0.0261, -0.0868, -0.0881,  0.0526, -0.0091, -0.0896,
-          0.0884, -0.0756, -0.0711,  0.0250,  0.0861,  0.0837,  0.0863, -0.1475,
-          0.0401,  0.0221, -0.1014, -0.0897, -0.0524, -0.1373, -0.1743, -0.0436,
-          0.0170,  0.0014, -0.0391,  0.0747,  0.2257, -0.0202,  0.0978, -0.0094,
-         -0.0246,  0.0536,  0.1537, -0.0831,  0.1042,  0.0737,  0.0463,  0.0441,
-          0.1680,  0.0965, -0.0134,  0.0048, -0.0515,  0.1577, -0.1668,  0.0821,
-          0.0474,  0.0731, -0.1263, -0.0415, -0.0754,  0.0682, -0.0239,  0.0209,
-         -0.0372, -0.1894,  0.0591, -0.1411, -0.1264,  0.0512,  0.0713, -0.1293,
-          0.0067,  0.0366,  0.0646, -0.0385, -0.0780, -0.0292, -0.1287,  0.0189,
-         -0.0183,  0.0917,  0.0784, -0.1084,  0.0142,  0.1496,  0.0748, -0.0422,
-          0.0952,  0.1602, -0.0046,  0.0735,  0.0056,  0.0401, -0.0179, -0.0762,
-          0.1354,  0.0009,  0.0308,  0.0649, -0.1170,  0.0441,  0.0597, -0.0828,
-          0.0862,  0.0153, -0.1449, -0.0659,  0.0158,  0.0446, -0.1157, -0.0738], "username": "dat", "member_id": 1},
-        {"embedding": [ 0.0635,  0.1409, -0.0246,  0.0246,  0.1526,  0.0519, -0.1107,  0.0972,
-         -0.1791, -0.0296,  0.0006,  0.0843,  0.0444, -0.0702, -0.1145,  0.0781,
-         -0.1140, -0.0329,  0.0345, -0.0925, -0.1268,  0.0942, -0.0754, -0.0848,
-          0.0952, -0.1038, -0.1516, -0.0730,  0.0166,  0.0271, -0.0891, -0.1260,
-         -0.0588,  0.0173, -0.0212,  0.1922,  0.0669,  0.0018,  0.0480, -0.0430,
-          0.1092,  0.0453,  0.0269,  0.0141,  0.0906, -0.1036, -0.2199, -0.0537,
-         -0.0755, -0.0573, -0.0185, -0.0174,  0.1926, -0.0377,  0.0935, -0.0083,
-          0.0706, -0.0358,  0.0640, -0.0095,  0.0089,  0.1019,  0.0504,  0.0974,
-          0.1507,  0.0048, -0.0930, -0.0382, -0.0719,  0.0865, -0.0734,  0.0126,
-         -0.0507,  0.0409,  0.0041, -0.0322, -0.0440, -0.0140, -0.1414, -0.0287,
-         -0.0460, -0.1151,  0.1428, -0.0960, -0.0507,  0.0780,  0.1886, -0.0963,
-         -0.0219, -0.0123, -0.0053, -0.1439, -0.0559,  0.1153, -0.1123, -0.0392,
-         -0.1712,  0.0182,  0.1318,  0.0094,  0.0940,  0.0912,  0.1871,  0.1001,
-          0.0704,  0.1183, -0.0143,  0.0067, -0.0605, -0.0539,  0.0297, -0.0772,
-          0.1209,  0.1284, -0.0582,  0.0470, -0.1592,  0.1305, -0.0528, -0.1033,
-          0.0050,  0.0872, -0.1437, -0.0736, -0.0156, -0.0155, -0.0566, -0.0151], "username": "na", "member_id": 2},
-    ]
+# def build_annoy_index_sample(dimension, index_file):
+#     sample_data = [
+#         {"embedding": [ 0.0650,  0.0825,  0.0149,  0.0949,  0.1470, -0.0238, -0.0624,  0.1270,
+#          -0.1354, -0.1120, -0.0754,  0.1426, -0.0095, -0.0597, -0.0445,  0.0180,
+#          -0.1284,  0.1015, -0.1072, -0.1799, -0.1064,  0.0546,  0.0280, -0.1509,
+#          -0.0395,  0.0357, -0.0261, -0.0868, -0.0881,  0.0526, -0.0091, -0.0896,
+#           0.0884, -0.0756, -0.0711,  0.0250,  0.0861,  0.0837,  0.0863, -0.1475,
+#           0.0401,  0.0221, -0.1014, -0.0897, -0.0524, -0.1373, -0.1743, -0.0436,
+#           0.0170,  0.0014, -0.0391,  0.0747,  0.2257, -0.0202,  0.0978, -0.0094,
+#          -0.0246,  0.0536,  0.1537, -0.0831,  0.1042,  0.0737,  0.0463,  0.0441,
+#           0.1680,  0.0965, -0.0134,  0.0048, -0.0515,  0.1577, -0.1668,  0.0821,
+#           0.0474,  0.0731, -0.1263, -0.0415, -0.0754,  0.0682, -0.0239,  0.0209,
+#          -0.0372, -0.1894,  0.0591, -0.1411, -0.1264,  0.0512,  0.0713, -0.1293,
+#           0.0067,  0.0366,  0.0646, -0.0385, -0.0780, -0.0292, -0.1287,  0.0189,
+#          -0.0183,  0.0917,  0.0784, -0.1084,  0.0142,  0.1496,  0.0748, -0.0422,
+#           0.0952,  0.1602, -0.0046,  0.0735,  0.0056,  0.0401, -0.0179, -0.0762,
+#           0.1354,  0.0009,  0.0308,  0.0649, -0.1170,  0.0441,  0.0597, -0.0828,
+#           0.0862,  0.0153, -0.1449, -0.0659,  0.0158,  0.0446, -0.1157, -0.0738], "username": "dat", "member_id": 1},
+#         {"embedding": [ 0.0635,  0.1409, -0.0246,  0.0246,  0.1526,  0.0519, -0.1107,  0.0972,
+#          -0.1791, -0.0296,  0.0006,  0.0843,  0.0444, -0.0702, -0.1145,  0.0781,
+#          -0.1140, -0.0329,  0.0345, -0.0925, -0.1268,  0.0942, -0.0754, -0.0848,
+#           0.0952, -0.1038, -0.1516, -0.0730,  0.0166,  0.0271, -0.0891, -0.1260,
+#          -0.0588,  0.0173, -0.0212,  0.1922,  0.0669,  0.0018,  0.0480, -0.0430,
+#           0.1092,  0.0453,  0.0269,  0.0141,  0.0906, -0.1036, -0.2199, -0.0537,
+#          -0.0755, -0.0573, -0.0185, -0.0174,  0.1926, -0.0377,  0.0935, -0.0083,
+#           0.0706, -0.0358,  0.0640, -0.0095,  0.0089,  0.1019,  0.0504,  0.0974,
+#           0.1507,  0.0048, -0.0930, -0.0382, -0.0719,  0.0865, -0.0734,  0.0126,
+#          -0.0507,  0.0409,  0.0041, -0.0322, -0.0440, -0.0140, -0.1414, -0.0287,
+#          -0.0460, -0.1151,  0.1428, -0.0960, -0.0507,  0.0780,  0.1886, -0.0963,
+#          -0.0219, -0.0123, -0.0053, -0.1439, -0.0559,  0.1153, -0.1123, -0.0392,
+#          -0.1712,  0.0182,  0.1318,  0.0094,  0.0940,  0.0912,  0.1871,  0.1001,
+#           0.0704,  0.1183, -0.0143,  0.0067, -0.0605, -0.0539,  0.0297, -0.0772,
+#           0.1209,  0.1284, -0.0582,  0.0470, -0.1592,  0.1305, -0.0528, -0.1033,
+#           0.0050,  0.0872, -0.1437, -0.0736, -0.0156, -0.0155, -0.0566, -0.0151], "username": "na", "member_id": 2},
+#     ]
     
-    index = AnnoyIndex(dimension, 'angular')
-    labels = []
-    usernames = []
-    member_ids = []
+#     index = AnnoyIndex(dimension, 'angular')
+#     labels = []
+#     usernames = []
+#     member_ids = []
     
-    for i, item in enumerate(sample_data):
-        embedding = item["embedding"]
-        username = item["username"]
-        member_id = item["member_id"]
+#     for i, item in enumerate(sample_data):
+#         embedding = item["embedding"]
+#         username = item["username"]
+#         member_id = item["member_id"]
         
-        labels.append(i)
-        usernames.append(username)
-        member_ids.append(member_id)
-        index.add_item(i, embedding)
+#         labels.append(i)
+#         usernames.append(username)
+#         member_ids.append(member_id)
+#         index.add_item(i, embedding)
     
-    if labels:
-        index.build(50)
-        index.save(index_file)
-        print(f"Built and saved Annoy index to {index_file}.")
-    else:
-        print("No valid embeddings to build Annoy index.")
+#     if labels:
+#         index.build(50)
+#         index.save(index_file)
+#         print(f"Built and saved Annoy index to {index_file}.")
+#     else:
+#         print("No valid embeddings to build Annoy index.")
     
-    return labels, usernames, member_ids
+#     return labels, usernames, member_ids
 
 
 def check(embedding, threshold=0.5):
@@ -310,27 +310,27 @@ def check(embedding, threshold=0.5):
 
 
 
-def search_in_annoy_index(query_embedding, index_file, usernames, member_ids, n=10, threshold=threshold):
-    index = AnnoyIndex(dimension, 'angular')
-    index.load(index_file)
-    nearest_indices, distances = index.get_nns_by_vector(query_embedding, n=n, include_distances=True)
+# def search_in_annoy_index(query_embedding, index_file, usernames, member_ids, n=10, threshold=threshold):
+#     index = AnnoyIndex(dimension, 'angular')
+#     index.load(index_file)
+#     nearest_indices, distances = index.get_nns_by_vector(query_embedding, n=n, include_distances=True)
 
-    if not nearest_indices or len(usernames) <= max(nearest_indices):
-        print("Unable to find corresponding usernames in Annoy index.")
-        return {"username": None, "distance": None, "member_id": -1}
+#     if not nearest_indices or len(usernames) <= max(nearest_indices):
+#         print("Unable to find corresponding usernames in Annoy index.")
+#         return {"username": None, "distance": None, "member_id": -1}
 
-    result_usernames = [usernames[i] for i in nearest_indices]
-    result_member_ids = [member_ids[i] for i in nearest_indices]
-    label_counts = Counter(result_usernames)
-    most_common_label, count = label_counts.most_common(1)[0]
-    avg_distance = sum(distances) / n
-    print(avg_distance)
-    if avg_distance <= threshold:
-        most_common_member_id = result_member_ids[result_usernames.index(most_common_label)]
-        return {"username": most_common_label, "distance": avg_distance, "member_id": most_common_member_id}
-    else:
-        print(f"Average distance ({avg_distance}) exceeds threshold ({threshold}). No suitable match.")
-        return {"username": None, "distance": avg_distance, "member_id": -1}
+#     result_usernames = [usernames[i] for i in nearest_indices]
+#     result_member_ids = [member_ids[i] for i in nearest_indices]
+#     label_counts = Counter(result_usernames)
+#     most_common_label, count = label_counts.most_common(1)[0]
+#     avg_distance = sum(distances) / n
+#     print(avg_distance)
+#     if avg_distance <= threshold:
+#         most_common_member_id = result_member_ids[result_usernames.index(most_common_label)]
+#         return {"username": most_common_label, "distance": avg_distance, "member_id": most_common_member_id}
+#     else:
+#         print(f"Average distance ({avg_distance}) exceeds threshold ({threshold}). No suitable match.")
+#         return {"username": None, "distance": avg_distance, "member_id": -1}
 
 
 def encode_image(file_path, model):
@@ -465,7 +465,7 @@ if __name__ == '__main__':
     
     # Initialize Annoy index
     print("Initializing Annoy index...")
-    build_annoy_index_sample(dimension, index_file)
+    # build_annoy_index_sample(dimension, index_file)
     print("Annoy index initialized.")
     
     # Connect MQTT and run Flask app
