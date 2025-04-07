@@ -12,9 +12,9 @@ inference_transform = transforms.Compose([
 ])
 
 # Example inference (đã sửa)
-anchor_path = './face_20250401_161145_0.jpg'
+anchor_path = './uploads/8/face_8_a8ee84c4-b31f-4871-9e00-cc52b0852072.jpg'
 
-positive_path = './face_20250401_161145_0.jpg'
+positive_path = './uploads/8/face_8_a8ee84c4-b31f-4871-9e00-cc52b0852072.jpg'
 
 # Define Embedding Model (đã sửa)
 class EmbeddingModel(nn.Module):
@@ -67,7 +67,7 @@ def get_embedding(img_path, model, transform):
     return embedding
 
 # Load trained model
-checkpoint = torch.load(os.path.join('0.0000_checkpoint.pth'), map_location=torch.device('cpu')) 
+checkpoint = torch.load(os.path.join('0.0012_checkpoint.pth'), map_location=torch.device('cpu')) 
 model = SiameseModel(embedding_size=128).to(device)
 model.load_state_dict(checkpoint['model_state_dict'])
 model.eval()

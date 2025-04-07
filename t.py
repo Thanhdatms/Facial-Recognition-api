@@ -1,71 +1,137 @@
-import time
-import paho.mqtt.client as mqtt
-from paho.mqtt.client import CallbackAPIVersion
+import sqlite3
+from annoy import AnnoyIndex
+from collections import Counter
+import os
 
-# Configuration
-broker = "192.168.208.211"  # Địa chỉ broker của bạn
-port = 1883                 # Cổng mặc định của MQTT
-topic = "esp32/data"        # Topic để gửi tin nhắn
-message = "Hello, MQTT!"    # Tin nhắn mẫu
-
-# Initialize MQTT client with Callback API Version 2 and MQTT v5
-client = mqtt.Client(callback_api_version=CallbackAPIVersion.VERSION2, protocol=mqtt.MQTTv5)
-
-# Callback functions
-def on_connect(client, userdata, flags, reason_code, properties):
-    if reason_code == 0:
-        print("Connected to MQTT broker successfully")
-        # Gửi tin nhắn ngay khi kết nối thành công
-        send_message(client, topic, message)
-    else:
-        print(f"Failed to connect to MQTT broker with code: {reason_code}")
-
-def on_disconnect(client, userdata, flags, reason_code, properties):
-    print(f"Disconnected from MQTT broker with code: {reason_code}")
-
-def on_publish(client, userdata, mid, reason_code, properties):
-    print(f"Message {mid} published successfully")
-
-# Set callbacks
-client.on_connect = on_connect
-client.on_disconnect = on_disconnect
-client.on_publish = on_publish
-
-def send_message(client, topic, message):
-    """Gửi tin nhắn MQTT nếu đã kết nối."""
-    if client.is_connected():
-        result = client.publish(topic, message, qos=1)
-        print(f"Sending message '{message}' to topic '{topic}'")
-    else:
-        print("MQTT client is not connected, cannot send message")
-
-def connect_mqtt():
-    """Kết nối đến broker và xử lý thử lại nếu thất bại."""
+# === 1. Get database connection ===
+def get_db_connection(db_path):
     try:
-        client.connect(broker, port)
-        client.loop_start()  # Bắt đầu vòng lặp xử lý MQTT trong luồng nền
-    except Exception as e:
-        print(f"Error connecting to MQTT broker: {e}")
-        print("Retrying in 5 seconds...")
-        time.sleep(5)
-        connect_mqtt()  # Thử kết nối lại
+        conn = sqlite3.connect(db_path)
+        print("Connected to database.")
+        return conn
+    except sqlite3.Error as e:
+        print(f"❌ Error connecting to DB: {e}")
+        return None
 
+# === 2. Build Annoy index from embeddings in DB ===
+def build_annoy_index_from_db(dimension, index_file, db_path):
+    conn = get_db_connection(db_path)
+    if conn is None:
+        return [], []
+
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE tbl_register_faces SET account_id = id")
+        cursor.execute("SELECT image_vector_process, account_id FROM tbl_register_faces")
+    except sqlite3.Error as e:
+        print(f"SQL Error: {e}")
+        conn.close()
+        return [], []
+
+    labels = []
+    account_ids = []
+    index = AnnoyIndex(dimension, 'angular')
+
+    for i, row in enumerate(cursor.fetchall()):
+        embedding_blob, account_id = row
+        try:
+            # Parse embedding string safely
+            clean_str = embedding_blob.replace('[', '').replace(']', '').replace('\n', '').strip()
+            embedding = list(map(float, clean_str.split(',')))
+        except Exception as e:
+            print(f"⚠️ Error parsing embedding on row {i}: {e}")
+            continue
+
+        if len(embedding) != dimension:
+            print(f"⚠️ Skipping row {i} due to incorrect dimension: {len(embedding)}")
+            continue
+
+        labels.append(i)
+        account_ids.append(account_id)
+        index.add_item(i, embedding)
+        print(f"✔️ Added account_id: {account_id}, vector length: {len(embedding)}")
+
+    conn.close()
+
+    if labels:
+        index.build(50)
+        index.save(index_file)
+        print(f"✅ Annoy index successfully saved at: {index_file}")
+    else:
+        print("⚠️ No valid embeddings to build Annoy index.")
+
+    return labels, account_ids
+
+# === 3. Search for a query embedding in the index ===
+
+def search_in_annoy_index(query_embedding, index_file, dimension, account_ids, threshold=0.4):
+
+    index = AnnoyIndex(dimension, 'angular')
+    index.load(index_file)
+    print(f" Loaded Annoy index from: {index_file}")
+
+    # Get the single nearest neighbor
+    nearest_indices, distances = index.get_nns_by_vector(query_embedding, n=1, include_distances=True)
+
+    if not nearest_indices or nearest_indices[0] >= len(account_ids):
+        print("❌ Unable to find a matching account ID.")
+        return {"account_id": None, "distance": None}
+
+    nearest_index = nearest_indices[0]
+    nearest_distance = distances[0]
+    nearest_account_id = account_ids[nearest_index]
+
+    print(f"🏷 Nearest account_id: {nearest_account_id}")
+    print(f"📏 Distance: {nearest_distance:.4f}")
+
+    if nearest_distance <= threshold:
+        return {
+            "account_id": nearest_account_id,
+            "distance": nearest_distance,
+        }
+    else:
+
+        return {"account_id": "unknown", "distance": "unknown"}
+
+# === 4. Optional: Get a vector from DB by account_id (to test self-match)
+def get_embedding_by_account_id(account_id, db_path, dimension):
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT image_vector_process FROM tbl_register_faces WHERE account_id = ?", (account_id,))
+    result = cursor.fetchone()
+    conn.close()
+    if result:
+        vector_str = result[0].replace('[', '').replace(']', '').replace('\n', '')
+        vector = list(map(float, vector_str.split(',')))
+        if len(vector) == dimension:
+            return vector
+        else:
+            print(f"⚠️ Embedding found but dimension mismatch: {len(vector)}")
+    else:
+        print("❌ No embedding found for this account_id.")
+    return None
+
+# === 5. Example usage ===
 if __name__ == "__main__":
-    # Kết nối đến broker
-    connect_mqtt()
+    dimension = 128
+    db_path = "./face_recognition.db"
+    index_file = os.path.abspath("face_index.ann")
 
-    # Vòng lặp chính để giữ chương trình chạy
-    try:
-        while True:
-            # Kiểm tra trạng thái kết nối và gửi tin nhắn mỗi 10 giây
-            if client.is_connected():
-                print("MQTT is connected, sending periodic message...")
-                send_message(client, topic, "Periodic message")
-            else:
-                print("MQTT is not connected, attempting to reconnect...")
-                connect_mqtt()
-            time.sleep(10)
-    except KeyboardInterrupt:
-        print("Stopping program...")
-        client.loop_stop()
-        client.disconnect()
+    print("🔨 Building Annoy index...")
+    labels, account_ids = build_annoy_index_from_db(dimension, index_file, db_path)
+
+    if not labels:
+        print("❌ No index built. Exiting.")
+    else:
+        # 💡 Replace with an existing account_id in your DB to test matching
+        test_account_id = "1"  # <-- REPLACE with actual ID in your DB
+        print(f"🔍 Searching for account_id: {test_account_id}...")
+
+        query_embedding = get_embedding_by_account_id(test_account_id, db_path, dimension)
+
+        if query_embedding:
+            result = search_in_annoy_index(query_embedding, index_file, dimension, account_ids)
+            print("🔎 Search Result:", result)
+        else:
+            print("❌ Could not retrieve query embedding.")
