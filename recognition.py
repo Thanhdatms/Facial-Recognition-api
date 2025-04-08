@@ -7,7 +7,7 @@ from datetime import datetime
 import time
 import base64
 from collections import Counter
-from annoy import AnnoyIndex
+# from annoy import AnnoyIndex
 import threading
 from flask import Flask, Response, request, jsonify, Blueprint
 import paho.mqtt.client as mqtt
@@ -340,16 +340,16 @@ def register_face():
             embedding = get_embedding(cropped_path, model, inference_transform)
             embedding_json = json.dumps(embedding.tolist())
             # Insert into database
-            with sqlite3.connect(db_path) as conn:
-                cursor = conn.cursor()
-                face_image_process = f"http://localhost:8888/process/{account_id}/processed_{id}.jpg"
-                cursor.execute(
-                    "INSERT INTO tbl_register_faces (face_image_process, account_id, image_vector_process) VALUES (?, ?, ?)",
-                    (face_image_process, account_id, embedding_json),
-                )
-                conn.commit()
+            # with sqlite3.connect(db_path) as conn:
+            #     cursor = conn.cursor()
+            #     face_image_process = f"http://localhost:8888/process/{account_id}/processed_{id}.jpg"
+            #     cursor.execute(
+            #         "INSERT INTO tbl_register_faces (face_image_process, account_id, image_vector_process) VALUES (?, ?, ?)",
+            #         (face_image_process, account_id, embedding_json),
+            #     )
+            #     conn.commit()
 
-        return jsonify({"message": "Face registered successfully", "saved_faces": saved_faces})
+        return jsonify({"embedding": embedding_json})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -360,7 +360,7 @@ if __name__ == '__main__':
     
     # Initialize Annoy index
     print("Initializing Annoy index...")
-    labels, account_ids = build_annoy_index_from_db(dimension, index_file, db_path)
+    # labels, account_ids = build_annoy_index_from_db(dimension, index_file, db_path)
     print("Annoy index initialized.")
     # Connect MQTT and run Flask app
     # client.connect(broker, port)
