@@ -34,7 +34,7 @@ is_processing = False
 broker = "172.20.10.6"
 port = 1883
 topic = "esp32/data"
-db_path = '~/deployment/config/database.db'
+db_path = 'home/pi/deployment/config/database.db'
 
 device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
 
