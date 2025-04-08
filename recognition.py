@@ -21,8 +21,7 @@ import uuid
 app = Flask(__name__)
 
 # Configuration
-url_embedding = "http://192.168.208.211:8081/getAllDataWithUsername"
-esp32_cam_stream_url = "http://192.168.208.58:81/stream"
+esp32_cam_stream_url = "http://172.20.10.10:81/stream"
 captured_folder = "captured_folder"
 index_file = "hr_annoy_index.ann"
 dimension = 128
@@ -32,10 +31,10 @@ last_saved_time = 0
 labels = []
 account_ids = []
 is_processing = False
-broker = "192.168.208.211"
+broker = "172.20.10.6"
 port = 1883
 topic = "esp32/data"
-db_path = 'face_recognition.db'
+db_path = '~/deployment/config/database.db'
 
 device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
 
@@ -178,7 +177,7 @@ def image_to_base64(image_path):
         return base64.b64encode(img_file.read()).decode('utf-8')
 
 def send_post_request(image_base64, account_id, timestamp):
-    url = "http://192.168.208.211:8081/createhistories"
+    url = "http://172.20.10.6:8081/createhistories"
     data = {
         "base64Image": image_base64,
         "account_id": account_id,
