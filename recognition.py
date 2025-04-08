@@ -359,8 +359,8 @@ if __name__ == '__main__':
     
     # Initialize Annoy index
     print("Initializing Annoy index...")
-    # labels, account_ids = build_annoy_index_from_db(dimension, index_file, db_path)
+    labels, account_ids = build_annoy_index_from_db(dimension, index_file, db_path)
     print("Annoy index initialized.")
     # Connect MQTT and run Flask app
-    # client.connect(broker, port)
+    client.connect(broker, port)
     app.run(host='0.0.0.0', port=5000)
