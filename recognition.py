@@ -329,7 +329,7 @@ def register_face():
             return jsonify({"error": "No face detected"}), 400
 
         # Create directory if it doesn't exist
-        upload_dir = os.path.join("uploads", str(account_id))
+        upload_dir = os.path.join("process", str(account_id))
         os.makedirs(upload_dir, exist_ok=True)
 
         # Process each detected face
