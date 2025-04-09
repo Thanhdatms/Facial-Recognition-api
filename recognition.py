@@ -7,7 +7,7 @@ from datetime import datetime
 import time
 import base64
 from collections import Counter
-# from annoy import AnnoyIndex
+from annoy import AnnoyIndex
 import threading
 from flask import Flask, Response, request, jsonify, Blueprint
 import paho.mqtt.client as mqtt
@@ -23,7 +23,7 @@ app = Flask(__name__)
 # Configuration
 esp32_cam_stream_url = "http://172.20.10.10:81/stream"
 captured_folder = "captured_folder"
-index_file = "hr_annoy_index.ann"
+index_file = "./hr_annoy_index.ann"
 dimension = 128
 threshold = 0.8
 # checkpoint_path = '0.0012_checkpoint.pth'
@@ -34,14 +34,15 @@ is_processing = False
 broker = "172.20.10.6"
 port = 1883
 topic = "esp32/data"
-db_path = 'home/pi/deployment/config/database.db'
+db_path = '/home/pi/deployment/config/database.db'
+# db_path = './face_recognition.db'
 
 device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
 
-def get_db_connection(db_path='face_recognition.db'):
+def get_db_connection(db_path):
     """Create and return a database connection"""
     conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
+   
     return conn
 
 # Initialize MQTT client with protocol version 5 (latest)
@@ -61,6 +62,8 @@ def build_annoy_index_from_db(dimension, index_file, db_path):
     cursor = conn.cursor()
     try:
         cursor.execute("SELECT image_vector_process, account_id FROM tbl_register_faces")
+        rows = cursor.fetchall()
+        print(rows)
     except sqlite3.Error as e:
         print(f"SQL Error: {e}")
         conn.close()
@@ -70,13 +73,13 @@ def build_annoy_index_from_db(dimension, index_file, db_path):
     account_ids = []
     index = AnnoyIndex(dimension, 'angular')
 
-    for i, row in enumerate(cursor.fetchall()):
+    for i, row in enumerate(rows):
         embedding_blob, account_id = row
         try:
             clean_str = embedding_blob.replace('[', '').replace(']', '').replace('\n', '').strip()
             embedding = list(map(float, clean_str.split(',')))
         except Exception as e:
-            print(f"⚠️ Error parsing embedding on row {i}: {e}")
+            print(f"Error parsing embedding on row {i}: {e}")
             continue
 
         labels.append(i)
@@ -87,6 +90,7 @@ def build_annoy_index_from_db(dimension, index_file, db_path):
     if labels:
         index.build(50)
         index.save(index_file)
+        print("Create successfully")
     else:
         print("No valid embeddings to build Annoy index.")
 
@@ -94,6 +98,7 @@ def build_annoy_index_from_db(dimension, index_file, db_path):
 
 def search_in_annoy_index(query_embedding, account_ids, threshold=0.4):
 
+    labels, account_ids = build_annoy_index_from_db(dimension, index_file, db_path)
     index = AnnoyIndex(dimension, 'angular')
     index.load(index_file)
     nearest_indices, distances = index.get_nns_by_vector(query_embedding, n=1, include_distances=True)
@@ -103,8 +108,9 @@ def search_in_annoy_index(query_embedding, account_ids, threshold=0.4):
 
     nearest_index = nearest_indices[0]
     nearest_distance = distances[0]
+    print(nearest_distance)
     nearest_account_id = account_ids[nearest_index]
-
+    print(nearest_account_id)
     if nearest_distance <= threshold:
         return {
             "account_id": nearest_account_id,
@@ -210,29 +216,41 @@ def generate_frames():
 
         print("Processing frame...")
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+        faces = face_cascade.detectMultiScale(
+            gray, 
+            scaleFactor=1.1, 
+            minNeighbors=5, 
+            minSize=(30, 30)
+        )
+        display_frame = frame.copy()
 
         if len(faces) > 0:
             print(f"Number of faces detected: {len(faces)}")
-            for (x, y, w, h) in faces:
-                x_start = max(x - padding, 0)
-                y_start = max(y - padding, 0)
-                x_end = min(x + w + padding, frame.shape[1])
-                y_end = min(y + h + padding, frame.shape[0])
-                cv2.rectangle(frame, (x_start, y_start), (x_end, y_end), (0, 255, 0), 2)
+            (x, y, w, h) = faces[0]
+
+            # Apply padding to height
+            y_pad = max(0, y )
+            h_pad = min(frame.shape[0] - y_pad, h)
+
+            # Draw rectangle on detected face
+            cv2.rectangle(display_frame, (x, y_pad), 
+                        (x + w, y_pad + h_pad), (0, 255, 0), 2)
+
+            # Crop face region
+            face_frame = frame[y_pad:y_pad + h_pad, x:x + w]
 
             current_time = time.time()
             if face_detected_time == 0:
                 face_detected_time = current_time
 
-            if current_time - face_detected_time >= 3 and current_time - last_saved_time >= 8:
+            if current_time - face_detected_time >= 2 and current_time - last_saved_time >= 4:
                 print(f"Saving image after {current_time - face_detected_time}s and {current_time - last_saved_time}s.")
                 face_detected_time = 0
                 last_saved_time = current_time
 
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 image_path = os.path.join(captured_folder, f"captured_{timestamp}.jpg")
-                cv2.imwrite(image_path, frame)
+                cv2.imwrite(image_path, face_frame)
                 print(f"Saved image at: {image_path}")
 
                 if not is_processing:
@@ -244,6 +262,7 @@ def generate_frames():
                         try:
                             print("Processing image...")
                             query_embedding = get_embedding(image_path, model, inference_transform)
+                            print(query_embedding)
                             if query_embedding is not None:
                                 print("Encoded image successfully.")
                                 result = search_in_annoy_index(query_embedding, account_ids)
@@ -270,7 +289,7 @@ def generate_frames():
         else:
             face_detected_time = 0
 
-        _, buffer = cv2.imencode('.jpg', frame)
+        _, buffer = cv2.imencode('.jpg', display_frame)
         frame = buffer.tobytes()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
