@@ -96,7 +96,7 @@ def build_annoy_index_from_db(dimension, index_file, db_path):
 
     return labels, account_ids
 
-def search_in_annoy_index(query_embedding, account_ids, threshold=0.4):
+def search_in_annoy_index(query_embedding, account_ids, threshold=0.7):
 
     labels, account_ids = build_annoy_index_from_db(dimension, index_file, db_path)
     index = AnnoyIndex(dimension, 'angular')
