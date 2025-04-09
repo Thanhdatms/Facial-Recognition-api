@@ -35,7 +35,7 @@ broker = "172.20.10.6"
 port = 1883
 topic = "esp32/data"
 db_path = '/home/pi/deployment/config/database.db'
-# db_path = './face_recognition.db'
+#db_path = './face_recognition.db'
 
 device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
 
@@ -366,7 +366,7 @@ def register_face():
             #         (face_image_process, account_id, embedding_json),
             #     )
             #     conn.commit()
-        processPath = '/home/pi/deployment/ai/Facial-Recognition-api/'+cropped_path
+        processPath = '/backend/public/'+cropped_path
         return jsonify({
             "embedding": embedding_json,
             "processPath": processPath})
